@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="nl" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apex Journal | Pro Trading Analytics</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca'
+            },
+            surface: {
+              bg: '#090d16',
+              card: '#111827',
+              border: '#1f293d',
+              hover: '#1a2436'
+            },
+            profit: '#10b981',
+            loss: '#ef4444'
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Font Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Phosphor Icons CDN -->
+  <script src="https://unpkg.com/@phosphor-icons/web@2.0.3"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #090d16;
+      color: #f3f4f6;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090d16;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1f293d;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #374151;
+    }
+    .modal-backdrop {
+      backdrop-filter: blur(8px);
+      background-color: rgba(9, 13, 22, 0.75);
+    }
+    .glass-card {
+      background: rgba(17, 24, 39, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-brand-500 selection:text-white pb-16">
+
+  <header class="sticky top-0 z-30 border-b border-surface-border bg-[#090d16]/90 backdrop-blur-md px-4 sm:px-8 py-3.5 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center text-white shadow-lg shadow-brand-500/25">
+        <i class="ph-bold ph-chart-line-up text-xl"></i>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-base font-bold tracking-tight text-white">Apex<span class="text-brand-500">Journal</span></span>
+          <span class="text-[10px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded bg-brand-500/10 text-brand-400 border border-brand-500/20">PRO</span>
+        </div>
+        <p class="text-xs text-gray-400 hidden sm:block">Trade Execution & Performance Analytics</p>
+      </div>
+    </div>
+
+    <!-- Quick Action Buttons -->
+    <div class="flex items-center space-x-2 sm:space-x-3">
+      <button id="exportCsvBtn" title="Export naar CSV" class="p-2 sm:px-3 sm:py-2 text-xs font-medium text-gray-300 hover:text-white bg-surface-card hover:bg-surface-hover border border-surface-border rounded-lg transition flex items-center gap-1.5">
+        <i class="ph ph-download-simple text-sm"></i>
+        <span class="hidden sm:inline">Export CSV</span>
+      </button>
+
+      <button id="resetDemoBtn" title="Herstel Demo Data" class="p-2 sm:px-3 sm:py-2 text-xs font-medium text-gray-400 hover:text-gray-200 bg-surface-card hover:bg-surface-hover border border-surface-border rounded-lg transition flex items-center gap-1.5">
+        <i class="ph ph-arrow-counter-clockwise text-sm"></i>
+        <span class="hidden sm:inline">Reset Demo</span>
+      </button>
+
+      <button id="openNewTradeBtn" class="px-3.5 py-2 text-xs sm:text-sm font-semibold text-white bg-brand-600 hover:bg-brand-500 rounded-lg shadow-lg shadow-brand-600/30 transition flex items-center gap-1.5">
+        <i class="ph-bold ph-plus text-sm"></i>
+        <span>Nieuwe Trade</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
+
+    <!-- Overview Metrics Grid -->
+    <section class="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4">
+      <!-- Total P&L Card -->
+      <div class="col-span-2 sm:col-span-1 glass-card rounded-xl p-4 border border-surface-border relative overflow-hidden">
+        <div class="flex items-center justify-between text-gray-400 mb-1">
+          <span class="text-xs font-medium uppercase tracking-wider">Net P&L</span>
+          <i class="ph ph-currency-dollar text-base"></i>
+        </div>
+        <div id="statTotalPnl" class="text-2xl font-bold tracking-tight text-white">$0.00</div>
+        <p id="statPnlPercent" class="text-[11px] text-gray-400 mt-1 flex items-center gap-1">
+          <span>0 trades berekend</span>
+        </p>
+      </div>
+
+      <!-- Win Rate Card -->
+      <div class="glass-card rounded-xl p-4 border border-surface-border">
+        <div class="flex items-center justify-between text-gray-400 mb-1">
+          <span class="text-xs font-medium uppercase tracking-wider">Win Rate</span>
+          <i class="ph ph-trophy text-base"></i>
+        </div>
+        <div id="statWinRate" class="text-2xl font-bold tracking-tight text-white">0%</div>
+        <div class="w-full bg-gray-800 h-1.5 rounded-full mt-2 overflow-hidden">
+          <div id="statWinRateBar" class="bg-profit h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Profit Factor -->
+      <div class="glass-card rounded-xl p-4 border border-surface-border">
+        <div class="flex items-center justify-between text-gray-400 mb-1">
+          <span class="text-xs font-medium uppercase tracking-wider">Profit Factor</span>
+          <i class="ph ph-scales text-base"></i>
+        </div>
+        <div id="statProfitFactor" class="text-2xl font-bold tracking-tight text-white">0.00</div>
+        <p class="text-[11px] text-gray-400 mt-1">Bruto winst / verlies</p>
+      </div>
+
+      <!-- Average R-Multiple -->
+      <div class="glass-card rounded-xl p-4 border border-surface-border">
+        <div class="flex items-center justify-between text-gray-400 mb-1">
+          <span class="text-xs font-medium uppercase tracking-wider">Gem. R:R</span>
+          <i class="ph ph-arrows-out-line-horizontal text-base"></i>
+        </div>
+        <div id="statAvgR" class="text-2xl font-bold tracking-tight text-white">0.0 R</div>
+        <p class="text-[11px] text-gray-400 mt-1">Risk to Reward ratio</p>
+      </div>
+
+      <!-- Total Trades & W/L Ratio -->
+      <div class="glass-card rounded-xl p-4 border border-surface-border">
+        <div class="flex items-center justify-between text-gray-400 mb-1">
+          <span class="text-xs font-medium uppercase tracking-wider">Totaal Trades</span>
+          <i class="ph ph-stack text-base"></i>
+        </div>
+        <div id="statTotalTrades" class="text-2xl font-bold tracking-tight text-white">0</div>
+        <p id="statRatioWL" class="text-[11px] text-gray-400 mt-1">0W • 0L • 0BE</p>
+      </div>
+    </section>
+
+    <section class="glass-card rounded-xl p-5 border border-surface-border">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+        <div>
+          <h2 class="text-base font-semibold text-white flex items-center gap-2">
+            <i class="ph-bold ph-chart-line text-brand-500"></i>
+            Cumulative Equity Curve
+          </h2>
+          <p class="text-xs text-gray-400">Vermogensverloop over tijd op basis van afgesloten trades</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-surface-card border border-surface-border text-gray-300">
+            Account Balance: <strong id="currentBalanceDisplay" class="ml-1 text-white">$10,000</strong>
+          </span>
+        </div>
+      </div>
+      <div class="relative w-full h-64 sm:h-72">
+        <canvas id="equityChart"></canvas>
+      </div>
+    </section>
+
+    <section class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-surface-card/60 p-3.5 rounded-xl border border-surface-border">
+      <!-- Search and Filters -->
+      <div class="flex flex-wrap items-center gap-2.5 flex-1">
+        <!-- Search bar -->
+        <div class="relative min-w-[140px] flex-1 sm:flex-initial">
+          <i class="ph ph-magnifying-glass absolute left-3 top-2.5 text-gray-400 text-sm"></i>
+          <input id="searchInput" type="text" placeholder="Zoek op ticker, setup..." class="w-full pl-9 pr-3 py-1.5 text-xs bg-surface-bg border border-surface-border rounded-lg text-white focus:outline-none focus:border-brand-500 transition">
+        </div>
+
+        <!-- Filter Direction -->
+        <select id="filterDirection" class="py-1.5 px-3 text-xs bg-surface-bg border border-surface-border rounded-lg text-gray-300 focus:outline-none focus:border-brand-500">
+          <option value="ALL">Alle Richtingen</option>
+          <option value="LONG">Long</option>
+          <option value="SHORT">Short</option>
+        </select>
+
+        <!-- Filter Outcome -->
+        <select id="filterOutcome" class="py-1.5 px-3 text-xs bg-surface-bg border border-surface-border rounded-lg text-gray-300 focus:outline-none focus:border-brand-500">
+          <option value="ALL">Alle Resultaten</option>
+          <option value="WIN">Alleen Wins</option>
+          <option value="LOSS">Alleen Losses</option>
+          <option value="BE">Break-even</option>
+        </select>
+
+        <!-- Filter Setup -->
+        <select id="filterSetup" class="py-1.5 px-3 text-xs bg-surface-bg border border-surface-border rounded-lg text-gray-300 focus:outline-none focus:border-brand-500">
+          <option value="ALL">Alle Strategieën</option>
+        </select>
+      </div>
+
+      <!-- View Switcher -->
+      <div class="flex items-center gap-1 self-end md:self-auto bg-surface-bg p-1 rounded-lg border border-surface-border">
+        <button id="viewTableBtn" class="px-2.5 py-1 text-xs font-medium rounded-md bg-brand-600 text-white flex items-center gap-1 transition">
+          <i class="ph ph-table"></i>
+          <span>Tabel</span>
+        </button>
+        <button id="viewGridBtn" class="px-2.5 py-1 text-xs font-medium rounded-md text-gray-400 hover:text-white flex items-center gap-1 transition">
+          <i class="ph ph-squares-four"></i>
+          <span>Cards</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Table View Container -->
+    <div id="tableViewContainer" class="glass-card rounded-xl border border-surface-border overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs whitespace-nowrap">
+          <thead class="bg-surface-bg/80 text-gray-400 border-b border-surface-border uppercase tracking-wider font-semibold">
+            <tr>
+              <th class="py-3 px-4">Datum / Sessie</th>
+              <th class="py-3 px-4">Ticker</th>
+              <th class="py-3 px-4">Type</th>
+              <th class="py-3 px-4">Setup</th>
+              <th class="py-3 px-4 text-right">Entry / Exit</th>
+              <th class="py-3 px-4 text-right">P&L ($)</th>
+              <th class="py-3 px-4 text-right">R:R</th>
+              <th class="py-3 px-4">Emotie / Psychologie</th>
+              <th class="py-3 px-4 text-center">Chart</th>
+              <th class="py-3 px-4 text-right">Actie</th>
+            </tr>
+          </thead>
+          <tbody id="tradeTableBody" class="divide-y divide-surface-border text-gray-200">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+      <div id="emptyStateTable" class="hidden p-12 text-center text-gray-400">
+        <i class="ph ph-folder-open text-4xl mb-2 text-gray-600"></i>
+        <p class="text-sm">Geen trades gevonden met deze filters.</p>
+      </div>
+    </div>
+
+    <!-- Cards / Grid View Container -->
+    <div id="cardsViewContainer" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <!-- Dynamically populated -->
+    </div>
+
+  </main>
+
+  <!-- Modal: Add New Trade -->
+  <div id="tradeModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden">
+    <div class="bg-[#111827] border border-surface-border rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-surface-border flex items-center justify-between sticky top-0 bg-[#111827] z-10">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-brand-500/10 text-brand-400 flex items-center justify-center font-bold">
+            <i class="ph ph-plus-circle text-lg"></i>
+          </div>
+          <h3 class="text-base font-semibold text-white">Nieuwe Trade Loggen</h3>
+        </div>
+        <button id="closeModalBtn" class="text-gray-400 hover:text-white p-1 rounded-lg">
+          <i class="ph ph-x text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body / Form -->
+      <form id="tradeForm" class="p-6 space-y-4">
+        <!-- Row 1: Ticker, Direction, Date -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-1">Ticker / Asset *</label>
+            <input id="inputTicker" required type="text" placeholder="bijv. NQ, EUR/USD, BTC" class="w-full px-3 py-2 text-xs bg-surface-bg border border-surface-border rounded-lg text-white uppercase focus:outline-none focus:border-brand-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-1">Richting *</label>
+            <select id="inputDirection" class="w-full px-3 py-2 text-xs bg-surface-bg border border-surface-border rounded-lg text-white focus:outline-none focus:border-brand-500">
+              <option value="LONG">LONG 📈</option>
+              <option value="SHORT">SHORT 📉</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-1">Datum & Tijd *</label>
+            <input id="inputDate" required type="datetime-local" class="w-full px-3 py-2 text-xs bg-surface-bg border border-surface-border rounded-lg text-white focus:outline-none focus:border-brand-500">
+          </div>
+        </div>
+
+        <!-- Row 2: Price levels -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-surface-bg/40 p-3 rounded-xl border border-surface-border">
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-1">Entry Prijs *</label>
+            <input id="inputEntry" required step="any" type="number" placeholder="100.00" class="w-full px-3 py-2 text-xs bg-surface-bg border border-surface-border rounded-lg text-white focus:outline-none focus:border-brand-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-1">Exit Prijs *</label>
+            <input id="inputExit" required step="any" type="number" placeholder="105.00" class="w-full px-3 py-2 text-xs bg-surface-bg border border-surface-border rounded-lg text-white focus:outline-none focus:border-brand-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-1">Stop Loss *</label>
+            <input id="inputSl" required step="any" type="number" placeholder="98.00" class="w-full px-3 py-2 text-xs bg-surface-bg border border-surface-border rounded-lg text-white focus:outline-none focus:border-brand-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-1">Take Profit</label>
+            <input id="inputTp" step="any" type="number" placeholder="110.00" class="w-full px-3 py-2 text-xs bg-surface-bg border border-surface-border rounded-lg text-white focus:outline-none focus:border-brand-500">
+          </div>
+        </div>
+
+        <!-- Row 3: Position, Net PnL, R-Multiple -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-1">Contracts / Lots / Shares</label>
+            <input id="inputSize" step="any" type="number" value="1" placeholder="1" class="w-full px-3 py-2 text-xs bg-surface-bg border border-surface-border rounded-lg text-white focus:outline-none focus:border-brand-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-1">Net P&L ($) *</label>
+            <input id="inputPnl" required step="any" type="number" placeholder="Winst (+) of Verlies (-)" class="w-full px-3 py-2 text-xs bg-surface-bg border border-surface-border rounded-lg font-semibold text-white focus:outline-none focus:border-brand-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-1">R-Multiple (calc of handmatig)</label>
+            <input id="inputR" step="any" type="number" placeholder="bijv. 2.5 of -1" class="w-full px-3 py-2 text-xs bg-surface-bg border border-surface-border rounded-lg text-white focus:outline-none focus:border-brand-500">
+          </div>
+        </div>
+
+        <!-- Row 4: Setup, Session, Psychology -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-1">Strategie / Setup</label>
+            <input id="inputSetup" type="text" placeholder="bijv. FVG, Breakout, Liquidity Sweep" class="w-full px-3 py-2 text-xs bg-surface-bg border border-surface-border rounded-lg text-white focus:outline-none focus:border-brand-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-1">Handelssessie</label>
+            <select id="inputSession" class="w-full px-3 py-2 text-xs bg-surface-bg border border-surface-border rounded-lg text-white focus:outline-none focus:border-brand-500">
+              <option value="New York">New York 🗽</option>
+              <option value="London">London 🇬🇧</option>
+              <option value="Asia">Asia 🌏</option>
+              <option value="Overig">Overig</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-300 mb-1">Psychologie / Emotie</label>
+            <select id="inputEmotion" class="w-full px-3 py-2 text-xs bg-surface-bg border border-surface-border rounded-lg text-white focus:outline-none focus:border-brand-500">
+              <option value="Gedisciplineerd">Gedisciplineerd 🧘‍♂️</option>
+              <option value="Volgens Plan">Volgens Plan 🎯</option>
+              <option value="FOMO Entry">FOMO Entry ⚡</option>
+              <option value="Revenge Trade">Revenge Trade 🔥</option>
+              <option value="Vroeg Gesloten">Vroeg Gesloten 🏃</option>
+              <option value="SL Verschoven">SL Verschoven ⚠️</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Row 5: Screenshot URL & Notes -->
+        <div>
+          <label class="block text-xs font-medium text-gray-300 mb-1">Screenshot URL (TradingView of image link)</label>
+          <input id="inputScreenshot" type="url" placeholder="https://www.tradingview.com/x/... of afbeelding link" class="w-full px-3 py-2 text-xs bg-surface-bg border border-surface-border rounded-lg text-white focus:outline-none focus:border-brand-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-gray-300 mb-1">Trade Notities & Reflectie</label>
+          <textarea id="inputNotes" rows="2" placeholder="Waarom nam je de trade? Wat ging er goed of fout?" class="w-full px-3 py-2 text-xs bg-surface-bg border border-surface-border rounded-lg text-white focus:outline-none focus:border-brand-500"></textarea>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex items-center justify-end gap-3 pt-3 border-t border-surface-border">
+          <button type="button" id="cancelModalBtn" class="px-4 py-2 text-xs font-medium text-gray-300 hover:text-white bg-surface-bg border border-surface-border rounded-lg transition">Annuleren</button>
+          <button type="submit" class="px-5 py-2 text-xs font-semibold text-white bg-brand-600 hover:bg-brand-500 rounded-lg shadow-lg shadow-brand-600/30 transition">Trade Opslaan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Screenshot Viewer -->
+  <div id="imageModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden">
+    <div class="bg-[#111827] border border-surface-border rounded-2xl max-w-4xl w-full p-4 relative shadow-2xl">
+      <div class="flex items-center justify-between pb-3 mb-3 border-b border-surface-border">
+        <h4 id="imageModalTitle" class="text-sm font-semibold text-white">Trade Screenshot</h4>
+        <button id="closeImageModalBtn" class="text-gray-400 hover:text-white p-1 rounded-lg">
+          <i class="ph ph-x text-lg"></i>
+        </button>
+      </div>
+      <div class="flex items-center justify-center bg-black/40 rounded-lg overflow-hidden max-h-[70vh]">
+        <img id="imageModalImg" src="" alt="Trade screenshot" class="max-w-full max-h-[70vh] object-contain">
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 flex items-center gap-2 px-4 py-2.5 rounded-lg bg-surface-card border border-surface-border shadow-xl transform translate-y-16 opacity-0 transition-all duration-300 text-xs text-white">
+    <i id="toastIcon" class="ph-bold ph-check text-profit text-base"></i>
+    <span id="toastMsg">Melding</span>
+  </div>
+
+  <script>
+    // Initial Seed Data (Demo Trades for immediate visualization)
+    const DEMO_TRADES = [
+      {
+        id: "tr_1",
+        date: "2026-10-02T14:35",
+        ticker: "NQ",
+        direction: "LONG",
+        entry: 20420.50,
+        exit: 20510.00,
+        sl: 20385.00,
+        tp: 20520.00,
+        size: 2,
+        pnl: 179.00,
+        r: 2.52,
+        setup: "FVG Retest",
+        session: "New York",
+        emotion: "Volgens Plan",
+        screenshot: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&auto=format&fit=crop&q=60",
+        notes: "Schoon herstel van de 15m Fair Value Gap na open news dump."
+      },
+      {
+        id: "tr_2",
+        date: "2026-10-05T09:15",
+        ticker: "EUR/USD",
+        direction: "SHORT",
+        entry: 1.0945,
+        exit: 1.0965,
+        sl: 1.0965,
+        tp: 1.0890,
+        size: 1,
+        pnl: -200.00,
+        r: -1.0,
+        setup: "London Breakout",
+        session: "London",
+        emotion: "FOMO Entry",
+        screenshot: "",
+        notes: "Te snel ingestapt vóór candle sluiting. Volledige SL geraakt."
+      },
+      {
+        id: "tr_3",
+        date: "2026-10-07T15:45",
+        ticker: "BTC",
+        direction: "LONG",
+        entry: 64200,
+        exit: 66100,
+        sl: 63500,
+        tp: 66500,
+        size: 0.5,
+        pnl: 950.00,
+        r: 2.71,
+        setup: "Liquidity Sweep",
+        session: "New York",
+        emotion: "Gedisciplineerd",
+        screenshot: "https://images.unsplash.com/photo-1642543492481-44e81e3914a7?w=800&auto=format&fit=crop&q=60",
+        notes: "Geduld getoond tot Asia low werd opgeruimd. TP bijna perfect gehaald."
+      },
+      {
+        id: "tr_4",
+        date: "2026-10-09T10:05",
+        ticker: "ES",
+        direction: "SHORT",
+        entry: 5780.25,
+        exit: 5770.00,
+        sl: 5790.00,
+        tp: 5755.00,
+        size: 1,
+        pnl: 512.50,
+        r: 1.05,
+        setup: "Trendline Break",
+        session: "London",
+        emotion: "Vroeg Gesloten",
+        screenshot: "",
+        notes: "Vroeg gesloten wegens angst voor aankomend CPI data release."
+      },
+      {
+        id: "tr_5",
+        date: "2026-10-10T16:20",
+        ticker: "NVDA",
+        direction: "LONG",
+        entry: 122.50,
+        exit: 126.80,
+        sl: 120.50,
+        tp: 128.00,
+        size: 100,
+        pnl: 430.00,
+        r: 2.15,
+        setup: "Breakout",
+        session: "New York",
+        emotion: "Volgens Plan",
+        screenshot: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=60",
+        notes: "Dagelijkse weerstand gebroken met hoog volume."
+      }
+    ];
+
+    const STORAGE_KEY = "apex_trading_journal_data_v1";
+    const STARTING_BALANCE = 10000;
+
+    let trades = [];
+    let currentView = "table";
+    let equityChartInstance = null;
+
+    // Load initial data
+    function loadTrades() {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        try {
+          trades = JSON.parse(stored);
+        } catch (e) {
+          trades = [...DEMO_TRADES];
+        }
+      } else {
+        trades = [...DEMO_TRADES];
+        saveTrades();
+      }
+    }
+
+    function saveTrades() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(trades));
+    }
+
+    function computeMetrics(tradeList) {
+      const totalTrades = tradeList.length;
+      if (totalTrades === 0) {
+        return {
+          totalTrades: 0,
+          totalPnl: 0,
+          winRate: 0,
+          profitFactor: 0,
+          avgR: 0,
+          wins: 0,
+          losses: 0,
+          be: 0,
+          endingBalance: STARTING_BALANCE
+        };
+      }
+
+      let totalPnl = 0;
+      let grossProfit = 0;
+      let grossLoss = 0;
+      let wins = 0;
+      let losses = 0;
+      let be = 0;
+      let totalR = 0;
+
+      tradeList.forEach(t => {
+        const pnl = Number(t.pnl) || 0;
+        totalPnl += pnl;
+        totalR += Number(t.r) || 0;
+
+        if (pnl > 0) {
+          grossProfit += pnl;
+          wins++;
+        } else if (pnl < 0) {
+          grossLoss += Math.abs(pnl);
+          losses++;
+        } else {
+          be++;
+        }
+      });
+
+      const winRate = ((wins / totalTrades) * 100).toFixed(1);
+      const profitFactor = grossLoss === 0 
+        ? (grossProfit > 0 ? "MAX" : "0.00") 
+        : (grossProfit / grossLoss).toFixed(2);
+      const avgR = (totalR / totalTrades).toFixed(2);
+      const endingBalance = STARTING_BALANCE + totalPnl;
+
+      return {
+        totalTrades,
+        totalPnl,
+        winRate,
+        profitFactor,
+        avgR,
+        wins,
+        losses,
+        be,
+        endingBalance
+      };
+    }
+
+    // Format Currency
+    function formatMoney(amount) {
+      const isNegative = amount < 0;
+      const formatted = Math.abs(amount).toLocaleString('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2
+      });
+      return isNegative ? `-${formatted}` : `+${formatted}`;
+    }
+
+    // Toast notification
+    function showToast(message, isSuccess = true) {
+      const toast = document.getElementById("toast");
+      const icon = document.getElementById("toastIcon");
+      const msg = document.getElementById("toastMsg");
+
+      msg.innerText = message;
+      if (isSuccess) {
+        icon.className = "ph-bold ph-check text-profit text-base";
+      } else {
+        icon.className = "ph-bold ph-warning text-loss text-base";
+      }
+
+      toast.classList.remove("translate-y-16", "opacity-0");
+      setTimeout(() => {
+        toast.classList.add("translate-y-16", "opacity-0");
+      }, 3000);
+    }
+
+    function updateMetricsUI(filtered) {
+      const metrics = computeMetrics(filtered);
+
+      const pnlEl = document.getElementById("statTotalPnl");
+      pnlEl.textContent = formatMoney(metrics.totalPnl);
+      if (metrics.totalPnl > 0) {
+        pnlEl.className = "text-2xl font-bold tracking-tight text-profit";
+      } else if (metrics.totalPnl < 0) {
+        pnlEl.className = "text-2xl font-bold tracking-tight text-loss";
+      } else {
+        pnlEl.className = "text-2xl font-bold tracking-tight text-white";
+      }
+
+      document.getElementById("statWinRate").textContent = `${metrics.winRate}%`;
+      document.getElementById("statWinRateBar").style.width = `${metrics.winRate}%`;
+      document.getElementById("statProfitFactor").textContent = metrics.profitFactor;
+      document.getElementById("statAvgR").textContent = `${metrics.avgR} R`;
+      document.getElementById("statTotalTrades").textContent = metrics.totalTrades;
+      document.getElementById("statRatioWL").textContent = `${metrics.wins}W • ${metrics.losses}L • ${metrics.be}BE`;
+      document.getElementById("currentBalanceDisplay").textContent = `$${metrics.endingBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+      document.getElementById("statPnlPercent").textContent = `${metrics.totalTrades} trade(s) getoond`;
+    }
+
+    function renderEquityChart(tradeList) {
+      // Sort trades chronologically
+      const sorted = [...tradeList].sort((a, b) => new Date(a.date) - new Date(b.date));
+      
+      const labels = ["Start"];
+      const dataPoints = [STARTING_BALANCE];
+      let currentBal = STARTING_BALANCE;
+
+      sorted.forEach((t, i) => {
+        currentBal += Number(t.pnl) || 0;
+        const d = new Date(t.date);
+        labels.push(`${t.ticker} (${d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })})`);
+        dataPoints.push(currentBal);
+      });
+
+      const ctx = document.getElementById("equityChart").getContext("2d");
+
+      if (equityChartInstance) {
+        equityChartInstance.destroy();
+      }
+
+      const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+      gradient.addColorStop(0, 'rgba(99, 102, 241, 0.45)');
+      gradient.addColorStop(1, 'rgba(99, 102, 241, 0.0)');
+
+      equityChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Account Equity ($)',
+            data: dataPoints,
+            borderColor: '#6366f1',
+            borderWidth: 2.5,
+            pointBackgroundColor: '#818cf8',
+            pointBorderColor: '#090d16',
+            pointRadius: dataPoints.length > 25 ? 0 : 4,
+            pointHoverRadius: 6,
+            fill: true,
+            backgroundColor: gradient,
+            tension: 0.25
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#111827',
+              borderColor: '#1f293d',
+              borderWidth: 1,
+              padding: 10,
+              titleFont: { family: 'Inter', size: 12 },
+              bodyFont: { family: 'Inter', size: 13, weight: 'bold' },
+              callbacks: {
+                label: function(context) {
+                  return `$${context.parsed.y.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(255, 255, 255, 0.04)' },
+              ticks: { color: '#6b7280', font: { family: 'Inter', size: 10 } }
+            },
+            y: {
+              grid: { color: 'rgba(255, 255, 255, 0.06)' },
+              ticks: {
+                color: '#6b7280',
+                font: { family: 'Inter', size: 10 },
+                callback: function(value) {
+                  return '$' + value.toLocaleString();
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function populateSetupDropdown() {
+      const setupSelect = document.getElementById("filterSetup");
+      const currentSelected = setupSelect.value;
+      const setups = new Set();
+
+      trades.forEach(t => {
+        if (t.setup && t.setup.trim() !== "") {
+          setups.add(t.setup.trim());
+        }
+      });
+
+      setupSelect.innerHTML = '<option value="ALL">Alle Strategieën</option>';
+      setups.forEach(s => {
+        const opt = document.createElement("option");
+        opt.value = s;
+        opt.textContent = s;
+        setupSelect.appendChild(opt);
+      });
+
+      if (setups.has(currentSelected)) {
+        setupSelect.value = currentSelected;
+      }
+    }
+
+    function getFilteredTrades() {
+      const search = document.getElementById("searchInput").value.toLowerCase();
+      const dir = document.getElementById("filterDirection").value;
+      const outcome = document.getElementById("filterOutcome").value;
+      const setup = document.getElementById("filterSetup").value;
+
+      return trades.filter(t => {
+        // Search filter
+        const matchSearch = t.ticker.toLowerCase().includes(search) || 
+                            (t.setup && t.setup.toLowerCase().includes(search)) ||
+                            (t.notes && t.notes.toLowerCase().includes(search));
+        
+        // Direction filter
+        const matchDir = dir === "ALL" || t.direction === dir;
+
+        // Outcome filter
+        const pnl = Number(t.pnl) || 0;
+        let matchOutcome = true;
+        if (outcome === "WIN") matchOutcome = pnl > 0;
+        if (outcome === "LOSS") matchOutcome = pnl < 0;
+        if (outcome === "BE") matchOutcome = pnl === 0;
+
+        // Setup filter
+        const matchSetup = setup === "ALL" || (t.setup && t.setup.trim() === setup);
+
+        return matchSearch && matchDir && matchOutcome && matchSetup;
+      });
+    }
+
+    function renderTrades() {
+      const filtered = getFilteredTrades();
+      updateMetricsUI(filtered);
+      renderEquityChart(filtered);
+
+      const tableBody = document.getElementById("tradeTableBody");
+      const cardsContainer = document.getElementById("cardsViewContainer");
+      const emptyTable = document.getElementById("emptyStateTable");
+
+      tableBody.innerHTML = "";
+      cardsContainer.innerHTML = "";
+
+      if (filtered.length === 0) {
+        emptyTable.classList.remove("hidden");
+      } else {
+        emptyTable.classList.add("hidden");
+      }
+
+      // Sort newest trades first for the log
+      const displayList = [...filtered].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      displayList.forEach(t => {
+        const pnl = Number(t.pnl) || 0;
+        const isWin = pnl > 0;
+        const isLoss = pnl < 0;
+        const pnlClass = isWin ? "text-profit font-semibold" : (isLoss ? "text-loss font-semibold" : "text-gray-400");
+        const dirBadge = t.direction === "LONG" 
+          ? `<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-profit/10 text-profit border border-profit/20">LONG</span>`
+          : `<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-loss/10 text-loss border border-loss/20">SHORT</span>`;
+
+        const dateStr = new Date(t.date).toLocaleDateString('nl-NL', {
+          day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit'
+        });
+
+        // Table Row
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-surface-hover/50 transition";
+        tr.innerHTML = `
+          <td class="py-3 px-4">
+            <div class="font-medium text-white">${dateStr}</div>
+            <div class="text-[10px] text-gray-500">${t.session || 'Geen sessie'}</div>
+          </td>
+          <td class="py-3 px-4 font-bold text-white tracking-wide">${t.ticker}</td>
+          <td class="py-3 px-4">${dirBadge}</td>
+          <td class="py-3 px-4">
+            <span class="px-2 py-0.5 rounded-full text-[11px] bg-gray-800 text-gray-300 border border-gray-700">${t.setup || 'General'}</span>
+          </td>
+          <td class="py-3 px-4 text-right">
+            <div class="text-gray-300">${t.entry} &rarr; ${t.exit}</div>
+            <div class="text-[10px] text-gray-500">SL: ${t.sl || '-'}</div>
+          </td>
+          <td class="py-3 px-4 text-right ${pnlClass}">${formatMoney(pnl)}</td>
+          <td class="py-3 px-4 text-right font-medium ${t.r > 0 ? 'text-profit' : (t.r < 0 ? 'text-loss' : 'text-gray-400')}">
+            ${t.r !== undefined && t.r !== null ? (t.r > 0 ? `+${t.r}R` : `${t.r}R`) : '-'}
+          </td>
+          <td class="py-3 px-4">
+            <span class="text-[11px] text-gray-300 bg-surface-card px-2 py-0.5 rounded border border-surface-border">
+              ${t.emotion || 'Neutraal'}
+            </span>
+          </td>
+          <td class="py-3 px-4 text-center">
+            ${t.screenshot ? `
+              <button onclick="openImageModal('${t.screenshot}', '${t.ticker} Trade Chart')" class="p-1 rounded text-brand-400 hover:text-brand-300 transition" title="Bekijk screenshot">
+                <i class="ph ph-image text-base"></i>
+              </button>
+            ` : '<span class="text-gray-600">-</span>'}
+          </td>
+          <td class="py-3 px-4 text-right">
+            <button onclick="deleteTrade('${t.id}')" class="text-gray-500 hover:text-loss transition p-1" title="Verwijder trade">
+              <i class="ph ph-trash text-sm"></i>
+            </button>
+          </td>
+        `;
+        tableBody.appendChild(tr);
+
+        // Card Element
+        const card = document.createElement("div");
+        card.className = "glass-card rounded-xl p-4 border border-surface-border flex flex-col justify-between space-y-3";
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-white text-base">${t.ticker}</span>
+                ${dirBadge}
+              </div>
+              <span class="${pnlClass} text-sm">${formatMoney(pnl)}</span>
+            </div>
+            
+            <div class="text-xs text-gray-400 flex items-center justify-between py-1 border-b border-surface-border/50">
+              <span>${dateStr} (${t.session})</span>
+              <span class="font-semibold ${t.r > 0 ? 'text-profit' : (t.r < 0 ? 'text-loss' : 'text-gray-400')}">${t.r ? `${t.r}R` : '-'}</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 text-xs py-2 text-gray-300">
+              <div><span class="text-gray-500">Entry:</span> ${t.entry}</div>
+              <div><span class="text-gray-500">Exit:</span> ${t.exit}</div>
+              <div><span class="text-gray-500">SL:</span> ${t.sl || '-'}</div>
+              <div><span class="text-gray-500">Setup:</span> ${t.setup || 'Overig'}</div>
+            </div>
+
+            ${t.notes ? `<p class="text-[11px] text-gray-400 italic bg-surface-bg/40 p-2 rounded border border-surface-border/40 mt-1">${t.notes}</p>` : ''}
+          </div>
+
+          <div class="pt-2 border-t border-surface-border flex items-center justify-between">
+            <span class="text-[10px] text-gray-400 bg-surface-card px-2 py-0.5 rounded border border-surface-border">${t.emotion}</span>
+            <div class="flex items-center gap-2">
+              ${t.screenshot ? `
+                <button onclick="openImageModal('${t.screenshot}', '${t.ticker}')" class="text-xs text-brand-400 hover:underline flex items-center gap-1">
+                  <i class="ph ph-image"></i> Chart
+                </button>
+              ` : ''}
+              <button onclick="deleteTrade('${t.id}')" class="text-gray-500 hover:text-loss transition text-xs p-1">
+                <i class="ph ph-trash"></i>
+              </button>
+            </div>
+          </div>
+        `;
+        cardsContainer.appendChild(card);
+      });
+    }
+
+    function deleteTrade(id) {
+      trades = trades.filter(t => t.id !== id);
+      saveTrades();
+      populateSetupDropdown();
+      renderTrades();
+      showToast("Trade verwijderd", false);
+    }
+
+    window.deleteTrade = deleteTrade;
+
+    function openImageModal(url, title) {
+      const modal = document.getElementById("imageModal");
+      const img = document.getElementById("imageModalImg");
+      const modalTitle = document.getElementById("imageModalTitle");
+
+      img.src = url;
+      modalTitle.textContent = title;
+      modal.classList.remove("hidden");
+    }
+
+    window.openImageModal = openImageModal;
+
+    // Auto-calculate R:R and PnL when entering prices
+    function calculateTradeCalculations() {
+      const direction = document.getElementById("inputDirection").value;
+      const entry = parseFloat(document.getElementById("inputEntry").value);
+      const exit = parseFloat(document.getElementById("inputExit").value);
+      const sl = parseFloat(document.getElementById("inputSl").value);
+      const size = parseFloat(document.getElementById("inputSize").value) || 1;
+      const pnlInput = document.getElementById("inputPnl");
+      const rInput = document.getElementById("inputR");
+
+      if (!isNaN(entry) && !isNaN(exit)) {
+        let diff = (direction === "LONG") ? (exit - entry) : (entry - exit);
+        // If P&L is empty or previously auto-calculated, suggest rough PnL
+        if (pnlInput.value === "" || pnlInput.dataset.auto === "true") {
+          const autoPnl = (diff * size).toFixed(2);
+          pnlInput.value = autoPnl;
+          pnlInput.dataset.auto = "true";
+        }
+
+        // Calculate R-multiple if Stop Loss is provided
+        if (!isNaN(sl) && Math.abs(entry - sl) > 0) {
+          const riskPerUnit = Math.abs(entry - sl);
+          const rMultiple = (diff / riskPerUnit).toFixed(2);
+          rInput.value = rMultiple;
+        }
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      loadTrades();
+      populateSetupDropdown();
+      renderTrades();
+
+      // Set default datetime to now
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      document.getElementById("inputDate").value = now.toISOString().slice(0, 16);
+
+      // Auto-calc triggers
+      ["inputEntry", "inputExit", "inputSl", "inputSize", "inputDirection"].forEach(id => {
+        document.getElementById(id).addEventListener("input", calculateTradeCalculations);
+      });
+
+      document.getElementById("inputPnl").addEventListener("input", () => {
+        document.getElementById("inputPnl").dataset.auto = "false";
+      });
+
+      // Filter events
+      ["searchInput", "filterDirection", "filterOutcome", "filterSetup"].forEach(id => {
+        document.getElementById(id).addEventListener("input", renderTrades);
+      });
+
+      // View switcher
+      const viewTableBtn = document.getElementById("viewTableBtn");
+      const viewGridBtn = document.getElementById("viewGridBtn");
+      const tableViewContainer = document.getElementById("tableViewContainer");
+      const cardsViewContainer = document.getElementById("cardsViewContainer");
+
+      viewTableBtn.addEventListener("click", () => {
+        viewTableBtn.className = "px-2.5 py-1 text-xs font-medium rounded-md bg-brand-600 text-white flex items-center gap-1 transition";
+        viewGridBtn.className = "px-2.5 py-1 text-xs font-medium rounded-md text-gray-400 hover:text-white flex items-center gap-1 transition";
+        tableViewContainer.classList.remove("hidden");
+        cardsViewContainer.classList.add("hidden");
+      });
+
+      viewGridBtn.addEventListener("click", () => {
+        viewGridBtn.className = "px-2.5 py-1 text-xs font-medium rounded-md bg-brand-600 text-white flex items-center gap-1 transition";
+        viewTableBtn.className = "px-2.5 py-1 text-xs font-medium rounded-md text-gray-400 hover:text-white flex items-center gap-1 transition";
+        tableViewContainer.classList.add("hidden");
+        cardsViewContainer.classList.remove("hidden");
+      });
+
+      // Modal open/close
+      const tradeModal = document.getElementById("tradeModal");
+      const openNewTradeBtn = document.getElementById("openNewTradeBtn");
+      const closeModalBtn = document.getElementById("closeModalBtn");
+      const cancelModalBtn = document.getElementById("cancelModalBtn");
+
+      openNewTradeBtn.addEventListener("click", () => {
+        tradeModal.classList.remove("hidden");
+      });
+
+      const hideTradeModal = () => tradeModal.classList.add("hidden");
+      closeModalBtn.addEventListener("click", hideTradeModal);
+      cancelModalBtn.addEventListener("click", hideTradeModal);
+
+      // Screenshot modal close
+      const imageModal = document.getElementById("imageModal");
+      document.getElementById("closeImageModalBtn").addEventListener("click", () => {
+        imageModal.classList.add("hidden");
+      });
+
+      // Form submission
+      const tradeForm = document.getElementById("tradeForm");
+      tradeForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        const newTrade = {
+          id: "tr_" + Date.now(),
+          ticker: document.getElementById("inputTicker").value.trim().toUpperCase(),
+          direction: document.getElementById("inputDirection").value,
+          date: document.getElementById("inputDate").value,
+          entry: parseFloat(document.getElementById("inputEntry").value),
+          exit: parseFloat(document.getElementById("inputExit").value),
+          sl: parseFloat(document.getElementById("inputSl").value) || null,
+          tp: parseFloat(document.getElementById("inputTp").value) || null,
+          size: parseFloat(document.getElementById("inputSize").value) || 1,
+          pnl: parseFloat(document.getElementById("inputPnl").value) || 0,
+          r: parseFloat(document.getElementById("inputR").value) || 0,
+          setup: document.getElementById("inputSetup").value.trim() || "Algemeen",
+          session: document.getElementById("inputSession").value,
+          emotion: document.getElementById("inputEmotion").value,
+          screenshot: document.getElementById("inputScreenshot").value.trim(),
+          notes: document.getElementById("inputNotes").value.trim()
+        };
+
+        trades.unshift(newTrade);
+        saveTrades();
+        populateSetupDropdown();
+        renderTrades();
+        hideTradeModal();
+        tradeForm.reset();
+
+        // Refresh date input to current time
+        const curr = new Date();
+        curr.setMinutes(curr.getMinutes() - curr.getTimezoneOffset());
+        document.getElementById("inputDate").value = curr.toISOString().slice(0, 16);
+
+        showToast("Nieuwe trade succesvol toegevoegd!");
+      });
+
+      // Reset Demo Data
+      document.getElementById("resetDemoBtn").addEventListener("click", () => {
+        trades = [...DEMO_TRADES];
+        saveTrades();
+        populateSetupDropdown();
+        renderTrades();
+        showToast("Demo trades hersteld!");
+      });
+
+      // Export CSV
+      document.getElementById("exportCsvBtn").addEventListener("click", () => {
+        if (trades.length === 0) {
+          showToast("Geen data om te exporteren", false);
+          return;
+        }
+
+        const headers = ["ID", "Datum", "Ticker", "Richting", "Entry", "Exit", "StopLoss", "TakeProfit", "Grootte", "Net_PnL", "R_Multiple", "Setup", "Sessie", "Emotie", "Notities"];
+        const rows = trades.map(t => [
+          t.id,
+          t.date,
+          t.ticker,
+          t.direction,
+          t.entry,
+          t.exit,
+          t.sl || "",
+          t.tp || "",
+          t.size,
+          t.pnl,
+          t.r,
+          `"${(t.setup || "").replace(/"/g, '""')}"`,
+          t.session,
+          `"${(t.emotion || "").replace(/"/g, '""')}"`,
+          `"${(t.notes || "").replace(/"/g, '""')}"`
+        ]);
+
+        const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `apex_trades_export_${new Date().toISOString().slice(0,10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast("CSV bestand gedownload!");
+      });
+    });
+  </script>
+</body>
+</html>
